@@ -1,0 +1,9 @@
+DB_DRIVER=ODBC Driver 18 for SQL Server
+DB_SERVER=4zdenvwx4ccu7ncdmfyn73ak6q-fj7kz3tcvkvufhpjac2y2xra4a.datawarehouse.fabric.microsoft.com
+DB_DATABASE=GoldGAI
+DB_UID=lucas.matos@terceiro.rnp.br
+DB_PWD=Macae@202312
+DB_AUTHENTICATION=ActiveDirectoryInteractive
+DB_TRUST_CERTIFICATE=no
+DB_CONNECTION_TIMEOUT=60
+QUERY_TIMEOUT=300

@@ -1,0 +1,11 @@
+streamlit
+pandas
+openpyxl
+xlrd
+python-docx
+pdfplumber
+pymupdf
+rapidfuzz
+python-dotenv
+pyodbc
+sqlalchemy
