@@ -549,36 +549,79 @@ def obter_config_api():
 
         if "API_TOKEN" in st.secrets:
             api_token = st.secrets["API_TOKEN"]
-
     except Exception:
         pass
 
-    api_url = str(api_url).rstrip("/")
+    api_url = str(api_url).strip().rstrip("/")
+    api_token = str(api_token).strip()
 
     return api_url, api_token
+
+
+def limpar_valor_json(valor):
+    if valor is None:
+        return None
+
+    try:
+        if pd.isna(valor):
+            return None
+    except Exception:
+        pass
+
+    try:
+        import math
+
+        if isinstance(valor, float):
+            if math.isnan(valor) or math.isinf(valor):
+                return None
+    except Exception:
+        pass
+
+    try:
+        import numpy as np
+
+        if isinstance(valor, np.generic):
+            valor = valor.item()
+
+            if isinstance(valor, float):
+                import math
+
+                if math.isnan(valor) or math.isinf(valor):
+                    return None
+    except Exception:
+        pass
+
+    if hasattr(valor, "isoformat"):
+        try:
+            return valor.isoformat()
+        except Exception:
+            return str(valor)
+
+    return valor
 
 
 def dataframe_para_payload(df):
     if df is None or df.empty:
         return []
 
-    df = df.copy()
+    registros = df.to_dict(orient="records")
+    registros_limpos = []
 
-    for coluna in df.columns:
-        df[coluna] = df[coluna].apply(
-            lambda valor: valor.isoformat() if hasattr(valor, "isoformat") else valor
-        )
+    for registro in registros:
+        registro_limpo = {}
 
-    df = df.where(pd.notna(df), None)
+        for chave, valor in registro.items():
+            registro_limpo[chave] = limpar_valor_json(valor)
 
-    return df.to_dict(orient="records")
+        registros_limpos.append(registro_limpo)
+
+    return registros_limpos
 
 
 def comparar_com_topdesk_web(df_validado, cidade_escolhida):
     import requests
 
     api_url, api_token = obter_config_api()
-
     endpoint = f"{api_url}/topdesk/comparar"
 
     payload = {
@@ -608,7 +651,14 @@ def comparar_com_topdesk_web(df_validado, cidade_escolhida):
     resultado = resposta.json()
 
     total_topdesk = resultado.get("total_topdesk", 0)
-    dados_comparacao = resultado.get("dados", [])
+    dados_comparacao = (
+        resultado.get("dados")
+        or resultado.get("comparacao")
+        or resultado.get("df_comparacao")
+        or []
+    )
+
+    df_topdesk_resumo = pd.DataFrame()
 
     if total_topdesk and total_topdesk > 0:
         df_topdesk_resumo = pd.DataFrame([
@@ -618,8 +668,6 @@ def comparar_com_topdesk_web(df_validado, cidade_escolhida):
                 "api_url": api_url
             }
         ])
-    else:
-        df_topdesk_resumo = pd.DataFrame()
 
     df_comparacao = pd.DataFrame(dados_comparacao)
 
@@ -834,16 +882,16 @@ def aba_atualizar():
 
         st.markdown(
             """
-            <div class="info-box">
-                Esta etapa consulta a API AtualizaGestor, que faz a conexão com o Fabric/TopDesk.
-                Para teste local, deixe a API rodando em http://127.0.0.1:8000.
+            <div class="warning-box">
+                Esta etapa usa a API local publicada via Cloudflare Tunnel.
+                Configure API_BASE_URL no Streamlit Secrets.
             </div>
             """,
             unsafe_allow_html=True
         )
 
-        if st.button("Buscar no Fabric e comparar com TopDesk"):
-            with st.spinner("Conectando ao Fabric e buscando dados do TopDesk..."):
+        if st.button("Buscar na API e comparar com TopDesk"):
+            with st.spinner("Chamando a API local e buscando dados do TopDesk/Fabric..."):
                 try:
                     df_topdesk, df_comparacao = comparar_com_topdesk_web(
                         df_validado=df_validado,
@@ -856,16 +904,8 @@ def aba_atualizar():
                         st.session_state.df_topdesk = df_topdesk
                         st.session_state.df_comparacao_topdesk = df_comparacao
 
-                        total_topdesk = len(df_topdesk)
-
-                        if "total_topdesk" in df_topdesk.columns:
-                            try:
-                                total_topdesk = int(df_topdesk.iloc[0]["total_topdesk"])
-                            except Exception:
-                                total_topdesk = len(df_topdesk)
-
                         st.success(
-                            f"Foram encontrados {total_topdesk} registros únicos de escolas no TopDesk/Fabric via API."
+                            f"Comparação realizada com sucesso. Total retornado pela API: {int(df_topdesk.iloc[0]['total_topdesk']) if not df_topdesk.empty and 'total_topdesk' in df_topdesk.columns else len(df_topdesk)}."
                         )
 
                 except Exception as erro:
@@ -998,18 +1038,23 @@ def aba_orientacoes():
         """
     )
 
-    st.subheader("Configuração da API TopDesk/Fabric")
+    st.subheader("Configuração do TopDesk/Fabric")
 
     st.write(
-        "Para usar a comparação com TopDesk/Fabric, o Streamlit chama uma API externa. "
-        "Localmente, a API deve estar rodando em http://127.0.0.1:8000. "
-        "Na versão publicada, configure a URL da API no Streamlit Secrets."
+        "Para usar a comparação com TopDesk/Fabric na versão web, configure as credenciais no Streamlit Secrets."
     )
 
     st.code(
         """
-API_BASE_URL = "http://127.0.0.1:8000"
-API_TOKEN = ""
+DB_DRIVER = "ODBC Driver 18 for SQL Server"
+DB_SERVER = "seu-servidor.database.windows.net"
+DB_DATABASE = "seu-banco"
+DB_UID = "seu-usuario-ou-client-id"
+DB_PWD = "sua-senha-ou-secret"
+DB_AUTHENTICATION = "ActiveDirectoryServicePrincipal"
+DB_ENCRYPT = "yes"
+DB_TRUST_SERVER_CERTIFICATE = "no"
+DB_CONNECTION_TIMEOUT = "30"
         """,
         language="toml"
     )
@@ -1026,7 +1071,7 @@ API_TOKEN = ""
     st.markdown(
         """
         - Atualizar direto no SharePoint.
-        - Publicar a API em servidor/VM com ODBC Driver configurado.
+        - Melhorar conexão Fabric em ambiente web.
         - Gerar relatório de escolas sem informação.
         - Melhorar leitura de PDFs escaneados.
         - Criar histórico de atualizações.
