@@ -432,6 +432,210 @@ def extrair_tabelas_pdf(arquivo):
     return tabelas_extraidas
 
 
+
+
+def normalizar_texto_preservando_acentos(texto):
+    if texto is None:
+        return ""
+
+    texto = str(texto).replace("\xa0", " ").replace("\n", " ").strip()
+    texto = re.sub(r"\s+", " ", texto)
+
+    return texto.strip()
+
+
+def detectar_pdf_juazeiro_municipal(texto_completo, nome_arquivo=""):
+    texto = normalizar_minusculo(texto_completo)
+    nome_arquivo = normalizar_minusculo(nome_arquivo)
+
+    if "juazeiro" in nome_arquivo and "municipal" in nome_arquivo:
+        return True
+
+    condicoes = [
+        "secretaria de educacao e juventude de juazeiro" in texto,
+        "servidores da equipe gestora" in texto,
+        "gestores - frequencia" in texto or "gestores frequencia" in texto,
+        "escola servidor" in texto,
+    ]
+
+    return sum(condicoes) >= 3
+
+
+def extrair_todos_telefones_juazeiro(valor):
+    if valor is None or pd.isna(valor):
+        return []
+
+    valor = str(valor)
+
+    encontrados = re.findall(
+        r"\(?\d{2}\)?\s*\d{4,5}[-\s.]?\d{4}|(?<!\d)\d{8,11}(?!\d)",
+        valor
+    )
+
+    telefones = []
+
+    for item in encontrados:
+        telefone = re.sub(r"\D", "", item)
+
+        if telefone.startswith("55") and len(telefone) in [12, 13]:
+            telefone = telefone[2:]
+
+        if telefone.startswith("0") and len(telefone) in [11, 12]:
+            telefone = telefone[1:]
+
+        # O PDF de Juazeiro usa 99999999999 como placeholder.
+        if telefone == "99999999999":
+            continue
+
+        if len(telefone) in [8, 9, 10, 11] and telefone not in telefones:
+            telefones.append(telefone)
+
+    return telefones
+
+
+def limpar_nome_gestor_juazeiro(valor):
+    if valor is None or pd.isna(valor):
+        return None
+
+    texto = str(valor).replace("\n", " ").replace("\xa0", " ").strip()
+
+    texto = corrigir_texto_email(texto)
+
+    texto = re.sub(
+        r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}",
+        " ",
+        texto
+    )
+
+    texto = re.sub(
+        r"\((?:Efetivo|Concursado|Trabalhador\s+Tempor[áa]rio)\)",
+        " ",
+        texto,
+        flags=re.IGNORECASE
+    )
+
+    texto = re.sub(
+        r"\(?\d{2}\)?\s*\d{4,5}[-\s.]?\d{4}|(?<!\d)\d{8,11}(?!\d)",
+        " ",
+        texto
+    )
+
+    texto = re.sub(r"\b99999999999\b", " ", texto)
+    texto = re.sub(r"\s*-\s*", " ", texto)
+    texto = re.sub(r"\s+", " ", texto)
+    texto = texto.strip(" -()")
+
+    if texto.lower() in ["", "nan", "none", "-", "nao informado", "não informado"]:
+        return None
+
+    return texto
+
+
+def word_valida_juazeiro(word):
+    # Remove textos verticais da margem direita e rodapé/logos.
+    if not word.get("upright", True):
+        return False
+
+    if word["x0"] > 770:
+        return False
+
+    if word["top"] > 570:
+        return False
+
+    return True
+
+
+def extrair_juazeiro_municipal(arquivo):
+    dados = []
+
+    arquivo.seek(0)
+
+    with pdfplumber.open(arquivo) as pdf:
+        for pagina_numero, pagina in enumerate(pdf.pages, start=1):
+            words = pagina.extract_words(
+                x_tolerance=2,
+                y_tolerance=3,
+                keep_blank_chars=False
+            )
+
+            words = [word for word in words if word_valida_juazeiro(word)]
+
+            marcadores_linha = []
+
+            for word in words:
+                if (
+                    42 <= word["x0"] <= 66
+                    and re.fullmatch(r"\d{1,3}", word["text"])
+                ):
+                    marcadores_linha.append(word)
+
+            marcadores_linha = sorted(
+                marcadores_linha,
+                key=lambda word: word["top"]
+            )
+
+            for marcador in marcadores_linha:
+                palavras_linha = [
+                    word
+                    for word in words
+                    if abs(word["top"] - marcador["top"]) <= 4
+                ]
+
+                palavras_linha = sorted(
+                    palavras_linha,
+                    key=lambda word: word["x0"]
+                )
+
+                escola = normalizar_texto_preservando_acentos(
+                    " ".join(
+                        word["text"]
+                        for word in palavras_linha
+                        if 66 <= word["x0"] < 330
+                    )
+                )
+
+                servidor = normalizar_texto_preservando_acentos(
+                    " ".join(
+                        word["text"]
+                        for word in palavras_linha
+                        if 330 <= word["x0"] < 770
+                    )
+                )
+
+                if not escola or not servidor:
+                    continue
+
+                gestor = limpar_nome_gestor_juazeiro(servidor)
+                email = limpar_email(servidor)
+
+                telefones = ordenar_telefones(
+                    extrair_todos_telefones_juazeiro(servidor)
+                )
+
+                telefone_1 = telefones[0] if len(telefones) >= 1 else None
+                telefone_2 = telefones[1] if len(telefones) >= 2 else None
+                telefone_3 = telefones[2] if len(telefones) >= 3 else None
+                outros_telefones = "; ".join(telefones[3:]) if len(telefones) > 3 else None
+
+                if not gestor and not telefone_1 and not email:
+                    continue
+
+                dados.append({
+                    "inep": None,
+                    "escola": escola,
+                    "gestor": gestor,
+                    "telefone": telefone_1,
+                    "telefone_2": telefone_2,
+                    "telefone_3": telefone_3,
+                    "outros_telefones": outros_telefones,
+                    "email": email,
+                    "municipio": "Juazeiro",
+                    "origem": f"Juazeiro Municipal 2026 - página {pagina_numero}",
+                    "fonte_contato": "Juazeiro Municipal 2026"
+                })
+
+    return montar_dataframe(dados)
+
 def detectar_pdf_caruaru_municipal(texto_completo, nome_arquivo=""):
     texto = normalizar_minusculo(texto_completo)
     nome_arquivo = normalizar_minusculo(nome_arquivo)
@@ -1115,6 +1319,12 @@ def extrair_pdf(arquivo):
     nome_arquivo = getattr(arquivo, "name", "")
 
     texto_completo = extrair_texto_pdf(arquivo)
+
+    if detectar_pdf_juazeiro_municipal(texto_completo, nome_arquivo):
+        df_juazeiro = extrair_juazeiro_municipal(arquivo)
+
+        if not df_juazeiro.empty:
+            return df_juazeiro
 
     if detectar_pdf_caruaru_municipal(texto_completo, nome_arquivo):
         df_caruaru = extrair_caruaru_municipal(arquivo)
