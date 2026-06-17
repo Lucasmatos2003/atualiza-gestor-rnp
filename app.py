@@ -539,27 +539,91 @@ def atualizar_planilha_web(
             pass
 
 
-def comparar_com_topdesk_web(df_validado, cidade_escolhida):
+def obter_config_api():
+    api_url = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
+    api_token = os.getenv("API_TOKEN", "")
+
     try:
-        from services.topdesk_fabric import buscar_chamados_topdesk
-        from services.comparador_topdesk import comparar_com_topdesk
-    except Exception as erro:
-        raise ImportError(
-            "Não foi possível importar os módulos do TopDesk/Fabric. "
-            "Verifique se pyodbc, sqlalchemy e os arquivos de serviço estão instalados."
-        ) from erro
+        if "API_BASE_URL" in st.secrets:
+            api_url = st.secrets["API_BASE_URL"]
 
-    df_topdesk = buscar_chamados_topdesk(cidade_escolhida)
+        if "API_TOKEN" in st.secrets:
+            api_token = st.secrets["API_TOKEN"]
 
-    if df_topdesk is None or df_topdesk.empty:
-        return pd.DataFrame(), pd.DataFrame()
+    except Exception:
+        pass
 
-    df_comparacao = comparar_com_topdesk(
-        df_validado,
-        df_topdesk
+    api_url = str(api_url).rstrip("/")
+
+    return api_url, api_token
+
+
+def dataframe_para_payload(df):
+    if df is None or df.empty:
+        return []
+
+    df = df.copy()
+
+    for coluna in df.columns:
+        df[coluna] = df[coluna].apply(
+            lambda valor: valor.isoformat() if hasattr(valor, "isoformat") else valor
+        )
+
+    df = df.where(pd.notna(df), None)
+
+    return df.to_dict(orient="records")
+
+
+def comparar_com_topdesk_web(df_validado, cidade_escolhida):
+    import requests
+
+    api_url, api_token = obter_config_api()
+
+    endpoint = f"{api_url}/topdesk/comparar"
+
+    payload = {
+        "cidade": cidade_escolhida,
+        "dados_extraidos": dataframe_para_payload(df_validado)
+    }
+
+    headers = {
+        "Content-Type": "application/json"
+    }
+
+    if api_token:
+        headers["Authorization"] = f"Bearer {api_token}"
+
+    resposta = requests.post(
+        endpoint,
+        json=payload,
+        headers=headers,
+        timeout=300
     )
 
-    return df_topdesk, df_comparacao
+    if not resposta.ok:
+        raise Exception(
+            f"Erro na API TopDesk/Fabric: {resposta.status_code} - {resposta.text}"
+        )
+
+    resultado = resposta.json()
+
+    total_topdesk = resultado.get("total_topdesk", 0)
+    dados_comparacao = resultado.get("dados", [])
+
+    if total_topdesk and total_topdesk > 0:
+        df_topdesk_resumo = pd.DataFrame([
+            {
+                "total_topdesk": total_topdesk,
+                "cidade": cidade_escolhida,
+                "api_url": api_url
+            }
+        ])
+    else:
+        df_topdesk_resumo = pd.DataFrame()
+
+    df_comparacao = pd.DataFrame(dados_comparacao)
+
+    return df_topdesk_resumo, df_comparacao
 
 
 def aba_inicio():
@@ -770,9 +834,9 @@ def aba_atualizar():
 
         st.markdown(
             """
-            <div class="warning-box">
-                Esta etapa depende das credenciais do Fabric configuradas no Streamlit Secrets
-                e do driver ODBC disponível no ambiente.
+            <div class="info-box">
+                Esta etapa consulta a API AtualizaGestor, que faz a conexão com o Fabric/TopDesk.
+                Para teste local, deixe a API rodando em http://127.0.0.1:8000.
             </div>
             """,
             unsafe_allow_html=True
@@ -792,8 +856,16 @@ def aba_atualizar():
                         st.session_state.df_topdesk = df_topdesk
                         st.session_state.df_comparacao_topdesk = df_comparacao
 
+                        total_topdesk = len(df_topdesk)
+
+                        if "total_topdesk" in df_topdesk.columns:
+                            try:
+                                total_topdesk = int(df_topdesk.iloc[0]["total_topdesk"])
+                            except Exception:
+                                total_topdesk = len(df_topdesk)
+
                         st.success(
-                            f"Foram encontrados {len(df_topdesk)} registros únicos de escolas no TopDesk/Fabric."
+                            f"Foram encontrados {total_topdesk} registros únicos de escolas no TopDesk/Fabric via API."
                         )
 
                 except Exception as erro:
@@ -926,23 +998,18 @@ def aba_orientacoes():
         """
     )
 
-    st.subheader("Configuração do TopDesk/Fabric")
+    st.subheader("Configuração da API TopDesk/Fabric")
 
     st.write(
-        "Para usar a comparação com TopDesk/Fabric na versão web, configure as credenciais no Streamlit Secrets."
+        "Para usar a comparação com TopDesk/Fabric, o Streamlit chama uma API externa. "
+        "Localmente, a API deve estar rodando em http://127.0.0.1:8000. "
+        "Na versão publicada, configure a URL da API no Streamlit Secrets."
     )
 
     st.code(
         """
-DB_DRIVER = "ODBC Driver 18 for SQL Server"
-DB_SERVER = "seu-servidor.database.windows.net"
-DB_DATABASE = "seu-banco"
-DB_UID = "seu-usuario-ou-client-id"
-DB_PWD = "sua-senha-ou-secret"
-DB_AUTHENTICATION = "ActiveDirectoryServicePrincipal"
-DB_ENCRYPT = "yes"
-DB_TRUST_SERVER_CERTIFICATE = "no"
-DB_CONNECTION_TIMEOUT = "30"
+API_BASE_URL = "http://127.0.0.1:8000"
+API_TOKEN = ""
         """,
         language="toml"
     )
@@ -959,7 +1026,7 @@ DB_CONNECTION_TIMEOUT = "30"
     st.markdown(
         """
         - Atualizar direto no SharePoint.
-        - Melhorar conexão Fabric em ambiente web.
+        - Publicar a API em servidor/VM com ODBC Driver configurado.
         - Gerar relatório de escolas sem informação.
         - Melhorar leitura de PDFs escaneados.
         - Criar histórico de atualizações.
