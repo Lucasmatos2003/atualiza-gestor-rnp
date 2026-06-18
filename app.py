@@ -448,6 +448,13 @@ st.markdown(
             box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05) !important;
         }
 
+
+        .top-header {
+            border-bottom: 1px solid rgba(148, 163, 184, 0.22) !important;
+            padding-bottom: 16px !important;
+            margin-bottom: 18px !important;
+        }
+
     </style>
     """,
     unsafe_allow_html=True
@@ -777,6 +784,13 @@ def exibir_css_acessibilidade():
             box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05) !important;
         }
 
+
+        .top-header {
+            border-bottom: 1px solid rgba(148, 163, 184, 0.22) !important;
+            padding-bottom: 16px !important;
+            margin-bottom: 18px !important;
+        }
+
     </style>
         """,
         unsafe_allow_html=True
@@ -829,16 +843,6 @@ def exibir_cabecalho():
             </div>
             <div class="header-actions">
                 <div class="header-pill">API Local conectada</div>
-            </div>
-        </div>
-
-        <div class="hero-card">
-            <div class="hero-content">
-                <div class="hero-badge">✨ Plataforma de apoio operacional</div>
-                <div class="main-title">Atualize gestores com mais rapidez</div>
-                <div class="subtitle">
-                    Envie um ou vários arquivos, valide os contatos, pesquise escolas e compare informações com TopDesk/Fabric em um fluxo simples e visual.
-                </div>
             </div>
         </div>
         """,
