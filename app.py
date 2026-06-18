@@ -449,10 +449,43 @@ st.markdown(
         }
 
 
-        .top-header {
-            border-bottom: 1px solid rgba(148, 163, 184, 0.22) !important;
-            padding-bottom: 16px !important;
-            margin-bottom: 18px !important;
+        /* Remove barra padrão do Streamlit: Share, editar, GitHub e menu */
+        header[data-testid="stHeader"] {
+            display: none !important;
+            height: 0px !important;
+        }
+
+        div[data-testid="stToolbar"] {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0px !important;
+        }
+
+        div[data-testid="stDecoration"] {
+            display: none !important;
+            height: 0px !important;
+        }
+
+        div[data-testid="stStatusWidget"] {
+            display: none !important;
+        }
+
+        .stDeployButton {
+            display: none !important;
+        }
+
+        #MainMenu {
+            visibility: hidden !important;
+            display: none !important;
+        }
+
+        footer {
+            visibility: hidden !important;
+            display: none !important;
+        }
+
+        .block-container {
+            padding-top: 1.1rem !important;
         }
 
     </style>
@@ -785,10 +818,43 @@ def exibir_css_acessibilidade():
         }
 
 
-        .top-header {
-            border-bottom: 1px solid rgba(148, 163, 184, 0.22) !important;
-            padding-bottom: 16px !important;
-            margin-bottom: 18px !important;
+        /* Remove barra padrão do Streamlit: Share, editar, GitHub e menu */
+        header[data-testid="stHeader"] {
+            display: none !important;
+            height: 0px !important;
+        }
+
+        div[data-testid="stToolbar"] {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0px !important;
+        }
+
+        div[data-testid="stDecoration"] {
+            display: none !important;
+            height: 0px !important;
+        }
+
+        div[data-testid="stStatusWidget"] {
+            display: none !important;
+        }
+
+        .stDeployButton {
+            display: none !important;
+        }
+
+        #MainMenu {
+            visibility: hidden !important;
+            display: none !important;
+        }
+
+        footer {
+            visibility: hidden !important;
+            display: none !important;
+        }
+
+        .block-container {
+            padding-top: 1.1rem !important;
         }
 
     </style>
@@ -843,6 +909,16 @@ def exibir_cabecalho():
             </div>
             <div class="header-actions">
                 <div class="header-pill">API Local conectada</div>
+            </div>
+        </div>
+
+        <div class="hero-card">
+            <div class="hero-content">
+                <div class="hero-badge">✨ Plataforma de apoio operacional</div>
+                <div class="main-title">Atualize gestores com mais rapidez</div>
+                <div class="subtitle">
+                    Envie um ou vários arquivos, valide os contatos, pesquise escolas e compare informações com TopDesk/Fabric em um fluxo simples e visual.
+                </div>
             </div>
         </div>
         """,
