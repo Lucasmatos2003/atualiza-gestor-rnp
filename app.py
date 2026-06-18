@@ -31,146 +31,238 @@ st.markdown(
     """
     <style>
         :root {
-            --rnp-primary: #2563eb;
-            --rnp-primary-dark: #1e40af;
-            --rnp-bg: #f8fafc;
-            --rnp-card: #ffffff;
-            --rnp-text: #0f172a;
-            --rnp-muted: #64748b;
-            --rnp-border: #e2e8f0;
-            --rnp-success: #059669;
-            --rnp-warning: #d97706;
+            --bg-start: #eef2ff;
+            --bg-mid: #f8fafc;
+            --bg-end: #ecfeff;
+            --primary: #4f46e5;
+            --primary-2: #7c3aed;
+            --accent: #06b6d4;
+            --accent-2: #22c55e;
+            --danger: #f97316;
+            --card: rgba(255, 255, 255, 0.86);
+            --card-solid: #ffffff;
+            --text: #0f172a;
+            --muted: #64748b;
+            --border: rgba(148, 163, 184, 0.28);
+            --shadow: 0 18px 45px rgba(15, 23, 42, 0.10);
+        }
+
+        .stApp {
+            background:
+                radial-gradient(circle at top left, rgba(79, 70, 229, 0.14), transparent 34%),
+                radial-gradient(circle at top right, rgba(6, 182, 212, 0.16), transparent 30%),
+                linear-gradient(135deg, var(--bg-start) 0%, var(--bg-mid) 45%, var(--bg-end) 100%);
         }
 
         .block-container {
-            padding-top: 1.4rem;
+            padding-top: 1.2rem;
             padding-bottom: 2rem;
+            max-width: 1280px;
+        }
+
+        .hero-card {
+            position: relative;
+            overflow: hidden;
+            background:
+                linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(49, 46, 129, 0.96) 48%, rgba(14, 116, 144, 0.94) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 30px;
+            padding: 32px 34px;
+            margin-bottom: 24px;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+        }
+
+        .hero-card:before {
+            content: "";
+            position: absolute;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            right: -80px;
+            top: -90px;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.36), rgba(6, 182, 212, 0.12));
+            filter: blur(3px);
+        }
+
+        .hero-card:after {
+            content: "";
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            left: 50%;
+            bottom: -120px;
+            background: rgba(124, 58, 237, 0.34);
+            filter: blur(8px);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.13);
+            color: #e0f2fe;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 999px;
+            padding: 7px 13px;
+            font-size: 13px;
+            font-weight: 800;
+            margin-bottom: 14px;
+            backdrop-filter: blur(10px);
         }
 
         .main-title {
-            font-size: 42px;
-            line-height: 1.05;
-            font-weight: 900;
-            color: white;
-            margin-bottom: 8px;
+            font-size: 46px;
+            line-height: 1.02;
+            font-weight: 950;
+            letter-spacing: -0.045em;
+            color: #ffffff;
+            margin-bottom: 10px;
         }
 
         .subtitle {
             font-size: 17px;
-            color: #dbeafe;
-            max-width: 850px;
-            margin-top: 0px;
-            margin-bottom: 0px;
+            line-height: 1.6;
+            color: #c7d2fe;
+            max-width: 900px;
+            margin: 0;
         }
 
-        .hero-card {
-            background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #0f172a 100%);
-            border-radius: 26px;
-            padding: 30px 32px;
-            margin-bottom: 22px;
-            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.20);
-        }
-
-        .hero-badge {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.16);
-            color: #eff6ff;
-            border: 1px solid rgba(255, 255, 255, 0.26);
-            border-radius: 999px;
-            padding: 6px 12px;
-            font-size: 13px;
-            font-weight: 700;
-            margin-bottom: 14px;
+        .step-card, .search-box {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(14px);
         }
 
         .step-card {
-            background-color: var(--rnp-card);
-            border: 1px solid var(--rnp-border);
-            border-radius: 18px;
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+            border-left: 5px solid var(--primary);
         }
 
-        .step-card:hover {
-            border-color: #bfdbfe;
-            box-shadow: 0 12px 28px rgba(37, 99, 235, 0.10);
+        .step-card:hover, .search-box:hover {
+            transform: translateY(-1px);
+            border-color: rgba(79, 70, 229, 0.30);
+            box-shadow: 0 22px 52px rgba(15, 23, 42, 0.14);
         }
 
         .step-title {
             font-size: 18px;
-            font-weight: 800;
-            color: var(--rnp-text);
-            margin-bottom: 6px;
+            font-weight: 900;
+            color: var(--text);
+            margin-bottom: 7px;
+            letter-spacing: -0.015em;
         }
 
         .step-description {
             font-size: 14.5px;
-            color: var(--rnp-muted);
-            line-height: 1.55;
+            color: var(--muted);
+            line-height: 1.58;
         }
 
-        .success-box {
-            background-color: #ecfdf5;
-            border: 1px solid #10b981;
-            color: #065f46;
-            border-radius: 14px;
-            padding: 14px;
-            font-weight: 700;
+        .step-pill {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border-radius: 999px;
+            padding: 3px 10px;
+            font-size: 12px;
+            font-weight: 900;
+            margin-right: 8px;
         }
 
-        .warning-box {
-            background-color: #fffbeb;
-            border: 1px solid #f59e0b;
-            color: #92400e;
-            border-radius: 14px;
-            padding: 14px;
-            font-weight: 700;
+        .info-box, .success-box, .warning-box {
+            border-radius: 18px;
+            padding: 16px 18px;
+            font-weight: 800;
+            margin-bottom: 14px;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
         }
 
         .info-box {
-            background-color: #eff6ff;
-            border: 1px solid #93c5fd;
+            background: linear-gradient(135deg, rgba(239, 246, 255, 0.98), rgba(224, 242, 254, 0.95));
+            border: 1px solid rgba(59, 130, 246, 0.25);
             color: #1e3a8a;
-            border-radius: 16px;
-            padding: 16px;
-            font-weight: 700;
-            margin-bottom: 14px;
         }
 
-        .search-box {
-            background-color: #ffffff;
-            border: 1px solid #dbeafe;
-            border-radius: 18px;
-            padding: 18px;
-            margin-bottom: 18px;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+        .success-box {
+            background: linear-gradient(135deg, rgba(236, 253, 245, 0.98), rgba(220, 252, 231, 0.95));
+            border: 1px solid rgba(16, 185, 129, 0.28);
+            color: #065f46;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, rgba(255, 251, 235, 0.98), rgba(255, 237, 213, 0.95));
+            border: 1px solid rgba(249, 115, 22, 0.25);
+            color: #9a3412;
         }
 
         .section-title {
             font-size: 22px;
-            font-weight: 900;
-            color: var(--rnp-text);
+            font-weight: 950;
+            color: var(--text);
             margin-bottom: 4px;
+            letter-spacing: -0.025em;
         }
 
         .section-subtitle {
             font-size: 14px;
-            color: var(--rnp-muted);
+            color: var(--muted);
             margin-bottom: 12px;
         }
 
         .small-text {
             font-size: 13px;
-            color: #6b7280;
+            color: #64748b;
         }
 
         div[data-testid="stMetric"] {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 12px 14px;
-            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+            background: var(--card-solid);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 13px 15px;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+        }
+
+        div[data-testid="stMetricValue"] {
+            color: var(--primary);
+            font-weight: 950;
+        }
+
+        div[data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 52%, #164e63 100%);
+        }
+
+        div[data-testid="stSidebar"] * {
+            color: #e5e7eb;
+        }
+
+        div[data-testid="stSidebar"] code {
+            color: #0f172a !important;
+        }
+
+        .stButton > button, .stDownloadButton > button {
+            border-radius: 14px !important;
+            border: 1px solid rgba(79, 70, 229, 0.20) !important;
+            font-weight: 850 !important;
+            box-shadow: 0 8px 22px rgba(79, 70, 229, 0.12);
+        }
+
+        .stButton > button:hover, .stDownloadButton > button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(6, 182, 212, 0.70) !important;
+        }
+
+        div[data-testid="stTabs"] button {
+            font-weight: 850;
+            border-radius: 999px;
         }
     </style>
     """,
@@ -406,10 +498,12 @@ def exibir_cabecalho():
     st.markdown(
         """
         <div class="hero-card">
-            <div class="hero-badge">📘 Educação Conectada • RNP</div>
-            <div class="main-title">AtualizaGestor RNP</div>
-            <div class="subtitle">
-                Atualize contatos de gestores, valide informações, pesquise escolas e compare os dados com TopDesk/Fabric em poucos passos.
+            <div class="hero-content">
+                <div class="hero-badge">✨ Educação Conectada • RNP</div>
+                <div class="main-title">AtualizaGestor RNP</div>
+                <div class="subtitle">
+                    Um painel moderno para atualizar gestores, validar contatos, pesquisar escolas e comparar informações com TopDesk/Fabric.
+                </div>
             </div>
         </div>
         """,
@@ -421,7 +515,7 @@ def card_etapa(numero, titulo, descricao):
     st.markdown(
         f"""
         <div class="step-card">
-            <div class="step-title">Etapa {numero} — {titulo}</div>
+            <div class="step-title"><span class="step-pill">{numero}</span>{titulo}</div>
             <div class="step-description">{descricao}</div>
         </div>
         """,
