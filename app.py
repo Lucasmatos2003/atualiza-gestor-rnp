@@ -218,6 +218,131 @@ st.markdown(
             margin-bottom: 12px;
         }
 
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            background: rgba(255, 255, 255, 0.78);
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            border-radius: 22px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.07);
+            backdrop-filter: blur(16px);
+        }
+
+        .brand-area {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            min-width: 230px;
+        }
+
+        .brand-logo {
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            font-size: 22px;
+            box-shadow: 0 10px 24px rgba(79, 70, 229, 0.24);
+        }
+
+        .brand-title {
+            font-size: 17px;
+            font-weight: 950;
+            color: var(--text);
+            line-height: 1.1;
+        }
+
+        .brand-subtitle {
+            font-size: 12px;
+            font-weight: 750;
+            color: var(--muted);
+        }
+
+        .header-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .header-pill {
+            background: #eef2ff;
+            color: #3730a3;
+            border: 1px solid #c7d2fe;
+            border-radius: 999px;
+            padding: 7px 11px;
+            font-size: 12px;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .header-pill-green {
+            background: #ecfdf5;
+            color: #047857;
+            border-color: #a7f3d0;
+        }
+
+        .footer-card {
+            margin-top: 26px;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 27, 75, 0.96));
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 24px;
+            padding: 20px 22px;
+            color: #e5e7eb;
+            box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18);
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr 1fr;
+            gap: 18px;
+            align-items: start;
+        }
+
+        .footer-title {
+            font-size: 17px;
+            font-weight: 950;
+            color: #ffffff;
+            margin-bottom: 6px;
+        }
+
+        .footer-text {
+            font-size: 13px;
+            color: #cbd5e1;
+            line-height: 1.55;
+        }
+
+        .footer-label {
+            font-size: 12px;
+            color: #93c5fd;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            margin-bottom: 6px;
+        }
+
+        @media (max-width: 850px) {
+            .top-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header-actions {
+                justify-content: flex-start;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .small-text {
             font-size: 13px;
             color: #64748b;
@@ -576,12 +701,27 @@ def exibir_checklist_fluxo(arquivo_planilha_mestre, cidade_escolhida, arquivos_p
 def exibir_cabecalho():
     st.markdown(
         """
+        <div class="top-header">
+            <div class="brand-area">
+                <div class="brand-logo">📘</div>
+                <div>
+                    <div class="brand-title">AtualizaGestor RNP</div>
+                    <div class="brand-subtitle">Educação Conectada</div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="header-pill">📤 Atualização</div>
+                <div class="header-pill">🔎 Pesquisa</div>
+                <div class="header-pill header-pill-green">🔗 API Local</div>
+            </div>
+        </div>
+
         <div class="hero-card">
             <div class="hero-content">
-                <div class="hero-badge">✨ Educação Conectada • RNP</div>
-                <div class="main-title">AtualizaGestor RNP</div>
+                <div class="hero-badge">✨ Plataforma de apoio operacional</div>
+                <div class="main-title">Atualize gestores com mais rapidez</div>
                 <div class="subtitle">
-                    Um painel moderno para atualizar gestores, validar contatos, pesquisar escolas e comparar informações com TopDesk/Fabric.
+                    Envie um ou vários arquivos, valide os contatos, pesquise escolas e compare informações com TopDesk/Fabric em um fluxo simples e visual.
                 </div>
             </div>
         </div>
@@ -1673,6 +1813,35 @@ API_TOKEN = ""
     )
 
 
+
+
+def exibir_rodape():
+    ano_atual = datetime.now().year
+
+    st.markdown(
+        f"""
+        <div class="footer-card">
+            <div class="footer-grid">
+                <div>
+                    <div class="footer-title">AtualizaGestor RNP</div>
+                    <div class="footer-text">
+                        Ferramenta de apoio para leitura, validação, pesquisa e atualização de contatos de gestores escolares.
+                    </div>
+                </div>
+                <div>
+                    <div class="footer-label">Versão</div>
+                    <div class="footer-text">Web • Multi-arquivos • API local</div>
+                </div>
+                <div>
+                    <div class="footer-label">{ano_atual}</div>
+                    <div class="footer-text">Educação Conectada • RNP</div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 def main():
     inicializar_estado()
     exibir_status_lateral()
@@ -1698,15 +1867,7 @@ def main():
     with aba4:
         aba_orientacoes()
 
-    st.markdown("---")
-    st.markdown(
-        """
-        <div class="small-text">
-            AtualizaGestor RNP — versão web com atualização da planilha e comparação TopDesk/Fabric.
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    exibir_rodape()
 
 
 if __name__ == "__main__":
