@@ -389,6 +389,65 @@ st.markdown(
             font-weight: 850;
             border-radius: 999px;
         }
+
+        /* Header limpo - versão ajustada */
+        .top-header {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 14px !important;
+            background: transparent !important;
+            border: none !important;
+            border-radius: 0 !important;
+            padding: 6px 2px 14px 2px !important;
+            margin-bottom: 10px !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+        }
+
+        .brand-area {
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            min-width: auto !important;
+        }
+
+        .brand-logo {
+            width: 36px !important;
+            height: 36px !important;
+            border-radius: 12px !important;
+            font-size: 18px !important;
+            box-shadow: 0 8px 18px rgba(79, 70, 229, 0.18) !important;
+        }
+
+        .brand-title {
+            font-size: 16px !important;
+            font-weight: 950 !important;
+            color: var(--text) !important;
+        }
+
+        .brand-subtitle {
+            font-size: 12px !important;
+            color: #64748b !important;
+        }
+
+        .header-actions {
+            display: flex !important;
+            justify-content: flex-end !important;
+            gap: 8px !important;
+        }
+
+        .header-pill {
+            background: rgba(255, 255, 255, 0.72) !important;
+            color: #0f766e !important;
+            border: 1px solid rgba(45, 212, 191, 0.35) !important;
+            border-radius: 999px !important;
+            padding: 6px 10px !important;
+            font-size: 12px !important;
+            font-weight: 850 !important;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05) !important;
+        }
+
     </style>
     """,
     unsafe_allow_html=True
@@ -659,7 +718,66 @@ def exibir_css_acessibilidade():
                 border-radius: 18px;
                 padding: 10px;
             }
-        </style>
+    
+        /* Header limpo - versão ajustada */
+        .top-header {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 14px !important;
+            background: transparent !important;
+            border: none !important;
+            border-radius: 0 !important;
+            padding: 6px 2px 14px 2px !important;
+            margin-bottom: 10px !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+        }
+
+        .brand-area {
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            min-width: auto !important;
+        }
+
+        .brand-logo {
+            width: 36px !important;
+            height: 36px !important;
+            border-radius: 12px !important;
+            font-size: 18px !important;
+            box-shadow: 0 8px 18px rgba(79, 70, 229, 0.18) !important;
+        }
+
+        .brand-title {
+            font-size: 16px !important;
+            font-weight: 950 !important;
+            color: var(--text) !important;
+        }
+
+        .brand-subtitle {
+            font-size: 12px !important;
+            color: #64748b !important;
+        }
+
+        .header-actions {
+            display: flex !important;
+            justify-content: flex-end !important;
+            gap: 8px !important;
+        }
+
+        .header-pill {
+            background: rgba(255, 255, 255, 0.72) !important;
+            color: #0f766e !important;
+            border: 1px solid rgba(45, 212, 191, 0.35) !important;
+            border-radius: 999px !important;
+            padding: 6px 10px !important;
+            font-size: 12px !important;
+            font-weight: 850 !important;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05) !important;
+        }
+
+    </style>
         """,
         unsafe_allow_html=True
     )
@@ -706,13 +824,11 @@ def exibir_cabecalho():
                 <div class="brand-logo">📘</div>
                 <div>
                     <div class="brand-title">AtualizaGestor RNP</div>
-                    <div class="brand-subtitle">Educação Conectada</div>
+                    <div class="brand-subtitle">Educação Conectada • Gestão de contatos escolares</div>
                 </div>
             </div>
             <div class="header-actions">
-                <div class="header-pill">📤 Atualização</div>
-                <div class="header-pill">🔎 Pesquisa</div>
-                <div class="header-pill header-pill-green">🔗 API Local</div>
+                <div class="header-pill">API Local conectada</div>
             </div>
         </div>
 
