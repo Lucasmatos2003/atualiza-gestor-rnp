@@ -324,6 +324,12 @@ def inicializar_estado():
     if "df_topdesk" not in st.session_state:
         st.session_state.df_topdesk = None
 
+    if "relatorio_arquivos_processados" not in st.session_state:
+        st.session_state.relatorio_arquivos_processados = []
+
+    if "modo_acessivel" not in st.session_state:
+        st.session_state.modo_acessivel = True
+
 
 def limpar_resultados():
     st.session_state.df_extraido = None
@@ -333,6 +339,7 @@ def limpar_resultados():
     st.session_state.nome_planilha_atualizada = None
     st.session_state.df_comparacao_topdesk = None
     st.session_state.df_topdesk = None
+    st.session_state.relatorio_arquivos_processados = []
 
 
 def normalizar_dataframe(df):
@@ -480,6 +487,12 @@ def exibir_status_lateral():
         st.markdown("### 📘 AtualizaGestor")
         st.caption("Painel rápido da sessão")
 
+        st.session_state.modo_acessivel = st.checkbox(
+            "Modo acessível",
+            value=st.session_state.get("modo_acessivel", True),
+            help="Aumenta áreas clicáveis e deixa a leitura mais confortável."
+        )
+
         st.markdown("---")
         st.markdown("**Status**")
         st.write("Arquivo lido:", "✅ Sim" if st.session_state.df_validado is not None else "⏳ Não")
@@ -493,6 +506,72 @@ def exibir_status_lateral():
         if st.button("Limpar sessão", key="botao_limpar_sessao"):
             limpar_resultados()
             st.rerun()
+
+
+
+def exibir_css_acessibilidade():
+    if not st.session_state.get("modo_acessivel", True):
+        return
+
+    st.markdown(
+        """
+        <style>
+            label, .stMarkdown, .stTextInput, .stSelectbox, .stRadio, .stFileUploader {
+                font-size: 1.02rem !important;
+            }
+
+            .stButton > button, .stDownloadButton > button {
+                min-height: 44px !important;
+                padding: 0.6rem 1rem !important;
+            }
+
+            input, textarea {
+                min-height: 42px !important;
+            }
+
+            div[data-testid="stFileUploader"] {
+                background: rgba(255, 255, 255, 0.72);
+                border-radius: 18px;
+                padding: 10px;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+def exibir_checklist_fluxo(arquivo_planilha_mestre, cidade_escolhida, arquivos_ponto_apoio, modo_leitura):
+    total_arquivos = len(arquivos_ponto_apoio) if arquivos_ponto_apoio else 0
+
+    st.markdown("### Conferência rápida")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    col1.metric(
+        "Planilha mestre",
+        "OK" if arquivo_planilha_mestre is not None else "Pendente"
+    )
+
+    col2.metric(
+        "Cidade",
+        cidade_escolhida
+    )
+
+    col3.metric(
+        "Arquivos enviados",
+        total_arquivos
+    )
+
+    col4.metric(
+        "Modo",
+        "Auto" if modo_leitura == "Leitura automática" else "Manual"
+    )
+
+    if total_arquivos > 1 and modo_leitura == "Mapeamento manual de colunas":
+        st.warning(
+            "O mapeamento manual só funciona com 1 arquivo por vez. "
+            "Para vários arquivos juntos, use Leitura automática."
+        )
 
 def exibir_cabecalho():
     st.markdown(
@@ -804,6 +883,114 @@ def tela_mapeamento_manual(arquivo_ponto_apoio):
     return df_mapeado
 
 
+
+
+def marcar_origem_arquivo(df, nome_arquivo):
+    if df is None or df.empty:
+        return normalizar_dataframe(df)
+
+    df = normalizar_dataframe(df)
+    df = df.copy()
+
+    nome_arquivo = str(nome_arquivo or "Arquivo enviado")
+
+    def montar_origem(valor):
+        valor = str(valor or "").strip()
+        if not valor or valor.lower() in ["none", "nan"]:
+            return nome_arquivo
+        if nome_arquivo.lower() in valor.lower():
+            return valor
+        return f"{valor} | {nome_arquivo}"
+
+    df["origem"] = df["origem"].apply(montar_origem)
+
+    if "fonte_contato" in df.columns:
+        df["fonte_contato"] = df["fonte_contato"].fillna(nome_arquivo)
+        df.loc[df["fonte_contato"].astype(str).str.strip().isin(["", "None", "nan"]), "fonte_contato"] = nome_arquivo
+
+    return df
+
+
+def processar_multiplos_arquivos(arquivos_ponto_apoio, cidade_escolhida, modo_leitura):
+    if not arquivos_ponto_apoio:
+        return pd.DataFrame(columns=COLUNAS_PADRAO), []
+
+    # No modo manual, mantemos um arquivo por vez para evitar confusão no mapeamento.
+    if modo_leitura == "Mapeamento manual de colunas":
+        arquivo = arquivos_ponto_apoio[0]
+        df = processar_leitura_arquivo(
+            arquivo_ponto_apoio=arquivo,
+            cidade_escolhida=cidade_escolhida,
+            modo_leitura=modo_leitura
+        )
+        df = marcar_origem_arquivo(df, arquivo.name)
+
+        relatorio = [
+            {
+                "arquivo": arquivo.name,
+                "status": "Lido",
+                "registros": len(df),
+                "observacao": "Mapeamento manual aplicado"
+            }
+        ]
+
+        return df, relatorio
+
+    dfs = []
+    relatorio = []
+    progresso = st.progress(0, text="Preparando leitura dos arquivos...")
+    total = len(arquivos_ponto_apoio)
+
+    for indice, arquivo in enumerate(arquivos_ponto_apoio, start=1):
+        progresso.progress(
+            indice / total,
+            text=f"Lendo {indice}/{total}: {arquivo.name}"
+        )
+
+        try:
+            arquivo.seek(0)
+
+            df = processar_leitura_arquivo(
+                arquivo_ponto_apoio=arquivo,
+                cidade_escolhida=cidade_escolhida,
+                modo_leitura=modo_leitura
+            )
+
+            df = marcar_origem_arquivo(df, arquivo.name)
+
+            if df is not None and not df.empty:
+                dfs.append(df)
+
+            relatorio.append({
+                "arquivo": arquivo.name,
+                "status": "Lido" if df is not None and not df.empty else "Sem dados encontrados",
+                "registros": 0 if df is None else len(df),
+                "observacao": ""
+            })
+
+        except Exception as erro:
+            relatorio.append({
+                "arquivo": arquivo.name,
+                "status": "Erro",
+                "registros": 0,
+                "observacao": str(erro)
+            })
+
+    progresso.empty()
+
+    if not dfs:
+        return pd.DataFrame(columns=COLUNAS_PADRAO), relatorio
+
+    df_final = pd.concat(dfs, ignore_index=True)
+    df_final = normalizar_dataframe(df_final)
+
+    df_final = df_final.drop_duplicates(
+        subset=["inep", "escola", "gestor", "telefone", "email"],
+        keep="first"
+    ).reset_index(drop=True)
+
+    return df_final, relatorio
+
 def processar_leitura_arquivo(arquivo_ponto_apoio, cidade_escolhida, modo_leitura):
     if modo_leitura == "Leitura automática":
         with st.spinner("Lendo o arquivo recebido do ponto de apoio..."):
@@ -1031,7 +1218,7 @@ def aba_inicio():
             <div class="step-card">
                 <div class="step-title">2. Envie o arquivo recebido</div>
                 <div class="step-description">
-                    Pode ser PDF, Excel, Word ou CSV enviado pelo ponto de apoio.
+                    Pode enviar um ou vários arquivos: PDF, Excel, Word ou CSV.
                 </div>
             </div>
             """,
@@ -1104,18 +1291,21 @@ def aba_atualizar():
 
     card_etapa(
         "3",
-        "Enviar o arquivo do ponto de apoio",
-        "Envie o arquivo recebido com os contatos dos gestores."
+        "Enviar arquivos do ponto de apoio",
+        "Envie um ou mais arquivos recebidos com os contatos dos gestores. Pode misturar PDF, Excel, Word e CSV."
     )
 
-    arquivo_ponto_apoio = st.file_uploader(
-        "Arquivo recebido do ponto de apoio",
+    arquivos_ponto_apoio = st.file_uploader(
+        "Arquivos recebidos do ponto de apoio",
         type=["xlsx", "xls", "csv", "pdf", "docx"],
-        key="upload_ponto_apoio"
+        key="upload_ponto_apoio",
+        accept_multiple_files=True,
+        help="Você pode enviar mais de um arquivo ao mesmo tempo. Exemplo: Juazeiro Municipal.pdf e Juazeiro Estadual.docx."
     )
 
-    if arquivo_ponto_apoio:
-        st.success("Arquivo do ponto de apoio enviado com sucesso.")
+    if arquivos_ponto_apoio:
+        nomes_arquivos = ", ".join([arquivo.name for arquivo in arquivos_ponto_apoio])
+        st.success(f"{len(arquivos_ponto_apoio)} arquivo(s) enviado(s): {nomes_arquivos}")
 
     st.divider()
 
@@ -1131,38 +1321,54 @@ def aba_atualizar():
             "Leitura automática",
             "Mapeamento manual de colunas"
         ],
-        horizontal=True
+        horizontal=True,
+        help="Use Leitura automática para vários arquivos. Use mapeamento manual quando for apenas um Excel/CSV com colunas fora do padrão."
     )
 
-    pode_ler = arquivo_ponto_apoio is not None
+    exibir_checklist_fluxo(
+        arquivo_planilha_mestre=arquivo_planilha_mestre,
+        cidade_escolhida=cidade_escolhida,
+        arquivos_ponto_apoio=arquivos_ponto_apoio,
+        modo_leitura=modo_leitura
+    )
+
+    pode_ler = arquivos_ponto_apoio is not None and len(arquivos_ponto_apoio) > 0
 
     if not pode_ler:
-        st.warning("Envie o arquivo do ponto de apoio para continuar.")
+        st.warning("Envie pelo menos um arquivo do ponto de apoio para continuar.")
         return
 
-    if st.button("Ler arquivo recebido", type="primary"):
+    if len(arquivos_ponto_apoio) > 1 and modo_leitura == "Mapeamento manual de colunas":
+        st.info("Para mapear manualmente, envie apenas um arquivo por vez ou altere para Leitura automática.")
+        return
+
+    texto_botao_ler = "Ler arquivos recebidos" if len(arquivos_ponto_apoio) > 1 else "Ler arquivo recebido"
+
+    if st.button(texto_botao_ler, type="primary"):
         limpar_resultados()
 
         try:
-            df_extraido = processar_leitura_arquivo(
-                arquivo_ponto_apoio=arquivo_ponto_apoio,
+            df_extraido, relatorio_arquivos = processar_multiplos_arquivos(
+                arquivos_ponto_apoio=arquivos_ponto_apoio,
                 cidade_escolhida=cidade_escolhida,
                 modo_leitura=modo_leitura
             )
 
+            st.session_state.relatorio_arquivos_processados = relatorio_arquivos
+
             if df_extraido is None or df_extraido.empty:
                 st.warning(
-                    "Não foi possível extrair dados do arquivo. "
-                    "Se for Excel ou CSV, tente usar o mapeamento manual."
+                    "Não foi possível extrair dados dos arquivos. "
+                    "Se for Excel ou CSV, tente usar o mapeamento manual com um arquivo por vez."
                 )
             else:
                 st.session_state.df_extraido = df_extraido
                 st.session_state.df_validado = validar_campos_obrigatorios(df_extraido)
 
-                st.success("Arquivo lido com sucesso.")
+                st.success(f"Leitura concluída com sucesso. {len(df_extraido)} registro(s) encontrado(s).")
 
         except Exception as erro:
-            st.error("Erro ao ler o arquivo recebido.")
+            st.error("Erro ao ler os arquivos recebidos.")
             st.exception(erro)
 
     if st.session_state.df_validado is not None:
@@ -1175,6 +1381,14 @@ def aba_atualizar():
         )
 
         df_validado = st.session_state.df_validado
+
+        if st.session_state.relatorio_arquivos_processados:
+            with st.expander("Ver leitura por arquivo", expanded=False):
+                st.dataframe(
+                    pd.DataFrame(st.session_state.relatorio_arquivos_processados),
+                    use_container_width=True,
+                    hide_index=True
+                )
 
         exibir_metricas_validacao(df_validado)
 
@@ -1462,6 +1676,7 @@ API_TOKEN = ""
 def main():
     inicializar_estado()
     exibir_status_lateral()
+    exibir_css_acessibilidade()
     exibir_cabecalho()
 
     aba1, aba2, aba3, aba4 = st.tabs([
