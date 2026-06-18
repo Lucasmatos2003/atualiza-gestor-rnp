@@ -1,5 +1,7 @@
 import os
+import re
 import tempfile
+import unicodedata
 from datetime import datetime
 
 import pandas as pd
@@ -28,70 +30,147 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+        :root {
+            --rnp-primary: #2563eb;
+            --rnp-primary-dark: #1e40af;
+            --rnp-bg: #f8fafc;
+            --rnp-card: #ffffff;
+            --rnp-text: #0f172a;
+            --rnp-muted: #64748b;
+            --rnp-border: #e2e8f0;
+            --rnp-success: #059669;
+            --rnp-warning: #d97706;
+        }
+
+        .block-container {
+            padding-top: 1.4rem;
+            padding-bottom: 2rem;
+        }
+
         .main-title {
-            font-size: 38px;
-            font-weight: 800;
-            color: #1f2937;
-            margin-bottom: 0px;
+            font-size: 42px;
+            line-height: 1.05;
+            font-weight: 900;
+            color: white;
+            margin-bottom: 8px;
         }
 
         .subtitle {
-            font-size: 18px;
-            color: #4b5563;
-            margin-top: 4px;
-            margin-bottom: 24px;
+            font-size: 17px;
+            color: #dbeafe;
+            max-width: 850px;
+            margin-top: 0px;
+            margin-bottom: 0px;
         }
 
-        .step-card {
-            background-color: #f8fafc;
-            border: 1px solid #e5e7eb;
-            border-radius: 14px;
-            padding: 18px;
+        .hero-card {
+            background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #0f172a 100%);
+            border-radius: 26px;
+            padding: 30px 32px;
+            margin-bottom: 22px;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.20);
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.16);
+            color: #eff6ff;
+            border: 1px solid rgba(255, 255, 255, 0.26);
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 700;
             margin-bottom: 14px;
         }
 
+        .step-card {
+            background-color: var(--rnp-card);
+            border: 1px solid var(--rnp-border);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+        }
+
+        .step-card:hover {
+            border-color: #bfdbfe;
+            box-shadow: 0 12px 28px rgba(37, 99, 235, 0.10);
+        }
+
         .step-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: #111827;
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--rnp-text);
             margin-bottom: 6px;
         }
 
         .step-description {
-            font-size: 15px;
-            color: #4b5563;
+            font-size: 14.5px;
+            color: var(--rnp-muted);
+            line-height: 1.55;
         }
 
         .success-box {
             background-color: #ecfdf5;
             border: 1px solid #10b981;
             color: #065f46;
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 14px;
-            font-weight: 600;
+            font-weight: 700;
         }
 
         .warning-box {
             background-color: #fffbeb;
             border: 1px solid #f59e0b;
             color: #92400e;
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 14px;
-            font-weight: 600;
+            font-weight: 700;
         }
 
         .info-box {
             background-color: #eff6ff;
-            border: 1px solid #3b82f6;
-            color: #1e40af;
-            border-radius: 12px;
-            padding: 14px;
-            font-weight: 600;
+            border: 1px solid #93c5fd;
+            color: #1e3a8a;
+            border-radius: 16px;
+            padding: 16px;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+
+        .search-box {
+            background-color: #ffffff;
+            border: 1px solid #dbeafe;
+            border-radius: 18px;
+            padding: 18px;
+            margin-bottom: 18px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--rnp-text);
+            margin-bottom: 4px;
+        }
+
+        .section-subtitle {
+            font-size: 14px;
+            color: var(--rnp-muted);
+            margin-bottom: 12px;
         }
 
         .small-text {
             font-size: 13px;
             color: #6b7280;
+        }
+
+        div[data-testid="stMetric"] {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 12px 14px;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
         }
     </style>
     """,
@@ -177,12 +256,161 @@ def normalizar_dataframe(df):
     return df[COLUNAS_PADRAO]
 
 
+
+
+def normalizar_busca(valor):
+    if valor is None or pd.isna(valor):
+        return ""
+
+    texto = str(valor).lower().strip()
+    texto = unicodedata.normalize("NFD", texto)
+    texto = texto.encode("ascii", "ignore").decode("utf-8")
+    texto = re.sub(r"\s+", " ", texto)
+
+    return texto
+
+
+def ordenar_colunas_exibicao(df):
+    colunas_prioritarias = [
+        "inep",
+        "escola",
+        "gestor",
+        "telefone",
+        "telefone_2",
+        "telefone_3",
+        "outros_telefones",
+        "email",
+        "municipio",
+        "status_validacao",
+        "status_topdesk",
+        "acao_sugerida",
+        "origem",
+        "fonte_contato"
+    ]
+
+    colunas = [coluna for coluna in colunas_prioritarias if coluna in df.columns]
+    colunas += [coluna for coluna in df.columns if coluna not in colunas]
+
+    return df[colunas]
+
+
+def filtrar_por_escola(df, termo):
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+    termo_normalizado = normalizar_busca(termo)
+
+    if not termo_normalizado:
+        return df.copy()
+
+    colunas_busca = [
+        coluna
+        for coluna in [
+            "inep",
+            "escola",
+            "gestor",
+            "telefone",
+            "telefone_2",
+            "telefone_3",
+            "email",
+            "municipio",
+            "origem",
+            "fonte_contato"
+        ]
+        if coluna in df.columns
+    ]
+
+    if not colunas_busca:
+        colunas_busca = list(df.columns)
+
+    texto_linhas = df[colunas_busca].fillna("").astype(str).agg(" ".join, axis=1)
+    mascara = texto_linhas.apply(lambda valor: termo_normalizado in normalizar_busca(valor))
+
+    return df[mascara].copy()
+
+
+def painel_pesquisa_escola(df, titulo, key_prefix, expandido=True):
+    if df is None or df.empty:
+        st.info("Nenhum dado disponível para pesquisa ainda.")
+        return
+
+    with st.container():
+        st.markdown(
+            f"""
+            <div class="search-box">
+                <div class="section-title">🔎 {titulo}</div>
+                <div class="section-subtitle">
+                    Pesquise por nome da escola, INEP, gestor, telefone, e-mail ou município.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        termo = st.text_input(
+            "Pesquisar escola",
+            placeholder="Exemplo: Vanda Guerra, 29476615, Juazeiro, Maria...",
+            key=f"pesquisa_{key_prefix}"
+        )
+
+        df_filtrado = filtrar_por_escola(df, termo)
+
+        col1, col2 = st.columns(2)
+        col1.metric("Total na base", len(df))
+        col2.metric("Resultado da pesquisa", len(df_filtrado))
+
+        if termo and df_filtrado.empty:
+            st.warning("Nenhuma escola encontrada com esse termo.")
+            return
+
+        with st.expander("Ver resultado da pesquisa", expanded=expandido):
+            st.dataframe(
+                ordenar_colunas_exibicao(df_filtrado),
+                use_container_width=True,
+                hide_index=True
+            )
+
+        csv_pesquisa = df_filtrado.to_csv(index=False).encode("utf-8-sig")
+
+        st.download_button(
+            label="Baixar resultado da pesquisa",
+            data=csv_pesquisa,
+            file_name=f"pesquisa_escola_{key_prefix}.csv",
+            mime="text/csv",
+            key=f"download_pesquisa_{key_prefix}"
+        )
+
+
+def exibir_status_lateral():
+    api_url, _ = obter_config_api()
+
+    with st.sidebar:
+        st.markdown("### 📘 AtualizaGestor")
+        st.caption("Painel rápido da sessão")
+
+        st.markdown("---")
+        st.markdown("**Status**")
+        st.write("Arquivo lido:", "✅ Sim" if st.session_state.df_validado is not None else "⏳ Não")
+        st.write("Comparação:", "✅ Sim" if st.session_state.df_comparacao_topdesk is not None else "⏳ Não")
+        st.write("Planilha atualizada:", "✅ Sim" if st.session_state.planilha_atualizada_bytes is not None else "⏳ Não")
+
+        st.markdown("---")
+        st.markdown("**API usada**")
+        st.code(api_url or "API_BASE_URL não configurada", language="text")
+
+        if st.button("Limpar sessão", key="botao_limpar_sessao"):
+            limpar_resultados()
+            st.rerun()
+
 def exibir_cabecalho():
     st.markdown(
         """
-        <div class="main-title">AtualizaGestor RNP</div>
-        <div class="subtitle">
-            Atualização de contatos de gestores escolares a partir de arquivos enviados pelos pontos de apoio.
+        <div class="hero-card">
+            <div class="hero-badge">📘 Educação Conectada • RNP</div>
+            <div class="main-title">AtualizaGestor RNP</div>
+            <div class="subtitle">
+                Atualize contatos de gestores, valide informações, pesquise escolas e compare os dados com TopDesk/Fabric em poucos passos.
+            </div>
         </div>
         """,
         unsafe_allow_html=True
@@ -856,7 +1084,14 @@ def aba_atualizar():
 
         exibir_metricas_validacao(df_validado)
 
-        with st.expander("Ver dados extraídos", expanded=True):
+        painel_pesquisa_escola(
+            df_validado,
+            "Pesquisar no arquivo lido",
+            "arquivo_lido",
+            expandido=False
+        )
+
+        with st.expander("Ver todos os dados extraídos", expanded=True):
             st.dataframe(
                 df_validado,
                 use_container_width=True,
@@ -1023,6 +1258,64 @@ def aba_atualizar():
             )
 
 
+
+
+def aba_pesquisar_escola():
+    st.markdown(
+        """
+        <div class="info-box">
+            Use esta área para localizar rapidamente uma escola depois que o arquivo for lido.
+            A pesquisa também funciona no relatório de comparação com TopDesk/Fabric, quando ele existir.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    fontes = []
+
+    if st.session_state.df_validado is not None and not st.session_state.df_validado.empty:
+        fontes.append("Arquivo lido")
+
+    if st.session_state.df_comparacao_topdesk is not None and not st.session_state.df_comparacao_topdesk.empty:
+        fontes.append("Comparação TopDesk/Fabric")
+
+    if st.session_state.relatorio_atualizacao is not None and not st.session_state.relatorio_atualizacao.empty:
+        fontes.append("Relatório da atualização")
+
+    if not fontes:
+        st.warning("Primeiro vá na aba Atualizar Gestores e leia um arquivo para liberar a pesquisa.")
+        return
+
+    fonte_escolhida = st.radio(
+        "Onde deseja pesquisar?",
+        fontes,
+        horizontal=True
+    )
+
+    if fonte_escolhida == "Arquivo lido":
+        painel_pesquisa_escola(
+            st.session_state.df_validado,
+            "Pesquisar escola no arquivo lido",
+            "aba_arquivo_lido",
+            expandido=True
+        )
+
+    elif fonte_escolhida == "Comparação TopDesk/Fabric":
+        painel_pesquisa_escola(
+            st.session_state.df_comparacao_topdesk,
+            "Pesquisar escola na comparação TopDesk/Fabric",
+            "aba_topdesk",
+            expandido=True
+        )
+
+    elif fonte_escolhida == "Relatório da atualização":
+        painel_pesquisa_escola(
+            st.session_state.relatorio_atualizacao,
+            "Pesquisar escola no relatório da atualização",
+            "aba_relatorio",
+            expandido=True
+        )
+
 def aba_orientacoes():
     st.subheader("Como usar corretamente")
 
@@ -1038,23 +1331,16 @@ def aba_orientacoes():
         """
     )
 
-    st.subheader("Configuração do TopDesk/Fabric")
+    st.subheader("Configuração da API local")
 
     st.write(
-        "Para usar a comparação com TopDesk/Fabric na versão web, configure as credenciais no Streamlit Secrets."
+        "Para usar a comparação com TopDesk/Fabric na versão web, o Streamlit Cloud chama a API local pela URL do Cloudflare Tunnel."
     )
 
     st.code(
         """
-DB_DRIVER = "ODBC Driver 18 for SQL Server"
-DB_SERVER = "seu-servidor.database.windows.net"
-DB_DATABASE = "seu-banco"
-DB_UID = "seu-usuario-ou-client-id"
-DB_PWD = "sua-senha-ou-secret"
-DB_AUTHENTICATION = "ActiveDirectoryServicePrincipal"
-DB_ENCRYPT = "yes"
-DB_TRUST_SERVER_CERTIFICATE = "no"
-DB_CONNECTION_TIMEOUT = "30"
+API_BASE_URL = "https://sua-url.trycloudflare.com"
+API_TOKEN = ""
         """,
         language="toml"
     )
@@ -1081,12 +1367,14 @@ DB_CONNECTION_TIMEOUT = "30"
 
 def main():
     inicializar_estado()
+    exibir_status_lateral()
     exibir_cabecalho()
 
-    aba1, aba2, aba3 = st.tabs([
-        "Início",
-        "Atualizar Gestores",
-        "Orientações"
+    aba1, aba2, aba3, aba4 = st.tabs([
+        "🏠 Início",
+        "📤 Atualizar Gestores",
+        "🔎 Pesquisar Escola",
+        "📘 Orientações"
     ])
 
     with aba1:
@@ -1096,6 +1384,9 @@ def main():
         aba_atualizar()
 
     with aba3:
+        aba_pesquisar_escola()
+
+    with aba4:
         aba_orientacoes()
 
     st.markdown("---")
